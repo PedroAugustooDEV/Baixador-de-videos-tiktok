@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TikTok Downloader</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hero">
+        <p class="eyebrow">MODO AVANCADO</p>
+        <h1>TikTok Batch Downloader</h1>
+        <p class="subtitle">Selecione videos no perfil, explorar ou For You e baixe sem marca d'agua.</p>
+        <div class="chips">
+          <span id="total-chip" class="chip">0/30 selecionados</span>
+          <span id="checked-chip" class="chip chip-alt">0 marcados</span>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="row row-tight">
+          <button id="pick-btn" class="btn">Selecao por clique</button>
+          <button id="scan-btn" class="btn">Importar visiveis</button>
+        </div>
+        <div class="row row-tight">
+          <button id="select-all-btn" class="btn btn-muted">Marcar todos</button>
+          <button id="clear-btn" class="btn btn-muted">Limpar lista</button>
+        </div>
+        <div class="row">
+          <button id="download-btn" class="btn btn-primary">Baixar marcados</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="list-head">
+          <strong>Lista de videos</strong>
+          <button id="refresh-btn" class="link-btn">Atualizar</button>
+        </div>
+        <div id="video-list" class="video-list"></div>
+      </section>
+
+      <div class="panel feedback-wrap">
+        <p id="feedback" class="feedback"></p>
+      </div>
+    </main>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

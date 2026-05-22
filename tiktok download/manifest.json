@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "TikTok No-Watermark Downloader (MVP)",
+  "version": "0.1.0",
+  "description": "Seleciona um vídeo do TikTok por clique e tenta baixar sem marca d'água.",
+  "permissions": ["activeTab", "storage", "downloads", "tabs"],
+  "host_permissions": [
+    "https://www.tiktok.com/*",
+    "https://www.tikwm.com/*",
+    "https://api.tiklydown.eu.org/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "TikTok Downloader",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.tiktok.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
