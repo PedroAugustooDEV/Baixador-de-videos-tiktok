@@ -121,6 +121,22 @@ h1 {
   color: #274c77;
 }
 
+.select-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e3a5f;
+}
+
+.select-input {
+  border: 1px solid #bfd3ec;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 12px;
+  color: #0e2a47;
+  background: #f8fbff;
+  outline: none;
+}
+
 .list-head {
   display: flex;
   align-items: center;

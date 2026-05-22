@@ -6,6 +6,7 @@ const scanBtn = document.getElementById("scan-btn");
 const refreshBtn = document.getElementById("refresh-btn");
 const selectAllBtn = document.getElementById("select-all-btn");
 const downloadBtn = document.getElementById("download-btn");
+const downloadTypeEl = document.getElementById("download-type");
 const clearBtn = document.getElementById("clear-btn");
 const videoListEl = document.getElementById("video-list");
 
@@ -88,6 +89,7 @@ downloadBtn.addEventListener("click", async () => {
   try {
     const tab = await ensureTab();
     const urls = selectedUrls.filter((url) => checkedUrls.has(url)).slice(0, MAX_SELECTION);
+    const downloadType = getDownloadType();
     if (urls.length === 0) {
       throw new Error("Nenhum video marcado para download.");
     }
@@ -95,7 +97,8 @@ downloadBtn.addEventListener("click", async () => {
     const response = await chrome.runtime.sendMessage({
       type: "download_selected_no_watermark",
       tabId: tab.id,
-      videoUrls: urls
+      videoUrls: urls,
+      downloadType
     });
 
     if (!response?.ok) {
@@ -103,8 +106,9 @@ downloadBtn.addEventListener("click", async () => {
     }
 
     const failCount = response.failures?.length || 0;
+    const formatLabel = downloadType === "mp3" ? "MP3" : "MP4";
     setFeedback(
-      `Downloads iniciados: ${response.success?.length || 0}/${response.total}. Falhas: ${failCount}.`,
+      `Downloads ${formatLabel} iniciados: ${response.success?.length || 0}/${response.total}. Falhas: ${failCount}.`,
       failCount > 0
     );
   } catch (error) {
@@ -262,6 +266,11 @@ function updateCounters() {
 function extractVideoId(url) {
   const match = url.match(/\/video\/(\d{8,})/);
   return match ? match[1] : "desconhecido";
+}
+
+function getDownloadType() {
+  const value = downloadTypeEl?.value;
+  return value === "mp3" ? "mp3" : "mp4";
 }
 
 function setFeedback(message, isError = false) {

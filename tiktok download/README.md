@@ -6,6 +6,7 @@ Base de extensao para testes no Chrome/Edge:
 - selecao por clique na pagina do TikTok
 - importacao de videos visiveis (perfil, explorar e For You)
 - download em lote sem marca d'agua
+- opcao de download em MP3 (audio) ou MP4 (video)
 - tentativa de resolver link sem marca d'agua via API externa
 
 ## Como testar
@@ -21,7 +22,8 @@ Base de extensao para testes no Chrome/Edge:
    - `Selecao por clique` e clique em varios videos (use `ESC` para sair desse modo)
    - `Importar visiveis` para puxar os videos do feed atual
 8. Marque os videos desejados na lista.
-9. Clique em `Baixar marcados`.
+9. Escolha o `Formato de download` (MP3 ou MP4).
+10. Clique em `Baixar marcados`.
 
 ## Observacoes
 

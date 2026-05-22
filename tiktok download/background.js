@@ -1,5 +1,7 @@
 const STORAGE_KEY = "selectedVideosByTab";
 const MAX_SELECTION = 30;
+const DOWNLOAD_TYPE_VIDEO = "mp4";
+const DOWNLOAD_TYPE_AUDIO = "mp3";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "add_selected_video") {
@@ -74,22 +76,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
 
-    handleNoWatermarkDownloads(tabId, message.videoUrls)
+    handleNoWatermarkDownloads(tabId, message.videoUrls, message.downloadType)
       .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: String(error) }));
     return true;
   }
 });
 
-async function handleNoWatermarkDownloads(tabId, explicitVideoUrls) {
+async function handleNoWatermarkDownloads(tabId, explicitVideoUrls, requestedDownloadType) {
   const sourceUrls = Array.isArray(explicitVideoUrls) ? explicitVideoUrls : await getSelectedVideos(tabId);
   const videoUrls = sourceUrls.slice(0, MAX_SELECTION).map(normalizeTikTokVideoUrl).filter(Boolean);
+  const downloadType = normalizeDownloadType(requestedDownloadType);
 
   if (videoUrls.length === 0) {
     throw new Error("Nenhum video selecionado para download.");
   }
 
   const summary = {
+    downloadType,
     total: videoUrls.length,
     success: [],
     failures: []
@@ -98,7 +102,7 @@ async function handleNoWatermarkDownloads(tabId, explicitVideoUrls) {
   for (let index = 0; index < videoUrls.length; index += 1) {
     const selectedVideoUrl = videoUrls[index];
     try {
-      const { downloadUrl, filename } = await resolveNoWatermarkUrl(selectedVideoUrl);
+      const { downloadUrl, filename } = await resolveNoWatermarkUrl(selectedVideoUrl, downloadType);
       const downloadId = await chrome.downloads.download({
         url: downloadUrl,
         filename,
@@ -124,13 +128,13 @@ async function handleNoWatermarkDownloads(tabId, explicitVideoUrls) {
   return summary;
 }
 
-async function resolveNoWatermarkUrl(tiktokUrl) {
+async function resolveNoWatermarkUrl(tiktokUrl, downloadType) {
   const resolvers = [resolveWithTikwm, resolveWithTiklydown];
   let lastError = null;
 
   for (const resolver of resolvers) {
     try {
-      const result = await resolver(tiktokUrl);
+      const result = await resolver(tiktokUrl, downloadType);
       if (result?.downloadUrl) {
         return result;
       }
@@ -146,7 +150,7 @@ async function resolveNoWatermarkUrl(tiktokUrl) {
   throw new Error("Nenhum resolver retornou uma URL valida.");
 }
 
-async function resolveWithTikwm(tiktokUrl) {
+async function resolveWithTikwm(tiktokUrl, downloadType) {
   const response = await fetch("https://www.tikwm.com/api/", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -159,19 +163,31 @@ async function resolveWithTikwm(tiktokUrl) {
 
   const data = await response.json();
   const payload = data?.data || {};
-  const downloadUrl = payload.hdplay || payload.play || payload.nwm_video_url || null;
+  const downloadUrl =
+    downloadType === DOWNLOAD_TYPE_AUDIO
+      ? pickFirst(
+          payload.music,
+          payload.music_url,
+          payload.music_info?.play,
+          payload.music_info?.url,
+          payload.music_data?.play,
+          payload.music_data?.play_url,
+          payload.audio,
+          payload.audio_url
+        )
+      : pickFirst(payload.hdplay, payload.play, payload.nwm_video_url);
 
   if (!downloadUrl) {
-    throw new Error("TikWM nao retornou URL sem marca d'agua.");
+    throw new Error(`TikWM nao retornou URL no formato ${downloadType.toUpperCase()}.`);
   }
 
   return {
     downloadUrl,
-    filename: buildFilename(tiktokUrl)
+    filename: buildFilename(tiktokUrl, downloadType)
   };
 }
 
-async function resolveWithTiklydown(tiktokUrl) {
+async function resolveWithTiklydown(tiktokUrl, downloadType) {
   const endpoint = `https://api.tiklydown.eu.org/api/download/v4?url=${encodeURIComponent(tiktokUrl)}`;
   const response = await fetch(endpoint);
 
@@ -182,22 +198,50 @@ async function resolveWithTiklydown(tiktokUrl) {
   const data = await response.json();
   const videoData = data?.video || {};
   const downloadUrl =
-    videoData.noWatermark || videoData.no_watermark || data?.noWatermark || null;
+    downloadType === DOWNLOAD_TYPE_AUDIO
+      ? pickFirst(
+          data?.music,
+          data?.musicUrl,
+          data?.music_url,
+          data?.audio,
+          data?.audioUrl,
+          data?.audio_url,
+          videoData.music,
+          videoData.musicUrl,
+          videoData.music_url,
+          videoData.audio,
+          videoData.audioUrl,
+          videoData.audio_url
+        )
+      : pickFirst(videoData.noWatermark, videoData.no_watermark, data?.noWatermark);
 
   if (!downloadUrl) {
-    throw new Error("TiklyDown nao retornou URL sem marca d'agua.");
+    throw new Error(`TiklyDown nao retornou URL no formato ${downloadType.toUpperCase()}.`);
   }
 
   return {
     downloadUrl,
-    filename: buildFilename(tiktokUrl)
+    filename: buildFilename(tiktokUrl, downloadType)
   };
 }
 
-function buildFilename(tiktokUrl) {
+function buildFilename(tiktokUrl, downloadType = DOWNLOAD_TYPE_VIDEO) {
   const match = tiktokUrl.match(/\/video\/(\d{8,})/);
   const id = match ? match[1] : `${Date.now()}-${Math.floor(Math.random() * 9999)}`;
-  return `tiktok-${id}.mp4`;
+  return `tiktok-${id}.${downloadType}`;
+}
+
+function normalizeDownloadType(rawType) {
+  return rawType === DOWNLOAD_TYPE_AUDIO ? DOWNLOAD_TYPE_AUDIO : DOWNLOAD_TYPE_VIDEO;
+}
+
+function pickFirst(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
 }
 
 async function addSelectedVideo(tabId, videoUrl) {
